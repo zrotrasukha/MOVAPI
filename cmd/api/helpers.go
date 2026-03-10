@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"strconv"
 
@@ -17,17 +18,17 @@ func (app *application) readIDParams(r *http.Request) (int64, error) {
 	return id, nil
 }
 
-func (app *application) writeJSON(w http.ResponseWriter, status int, data any, headers http.Header) error {
-	json, err := json.Marshal(data)
+type envelop map[string]any
+
+func (app *application) writeJSON(w http.ResponseWriter, status int, data envelop, headers http.Header) error {
+	json, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
 		return err
 	}
 
 	json = append(json, '\n')
 
-	for key, value := range headers {
-		w.Header()[key] = value
-	}
+	maps.Copy(w.Header(), headers)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
