@@ -5,7 +5,7 @@ import (
 )
 
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	data := map[string]string{
+	data := envelop{
 		"status":  "available",
 		"env":     app.config.env,
 		"version": version,
