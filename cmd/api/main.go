@@ -13,6 +13,7 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/zrotrasukha/MOVAPI/internal/data"
 )
 
 const version = "1.0.0"
@@ -31,6 +32,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 func main() {
@@ -55,22 +57,21 @@ func main() {
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
-	app := &application{
-		config: cfg,
-		logger: logger,
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/v1/healthcheck", app.healthCheckHandler)
-
 	db, err := openDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 	}
 	defer db.Close()
-
 	logger.Info("database conection pool established")
+
+	app := &application{
+		config: cfg,
+		logger: logger,
+		models: data.NewModels(db),
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/healthcheck", app.healthCheckHandler)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
