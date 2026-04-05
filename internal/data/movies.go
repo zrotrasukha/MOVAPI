@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -128,28 +129,35 @@ func (m MovieModel) Delete(id int64) error {
 	return nil
 }
 
-func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
-	query := `SELECT id, created_at, title, year, runtime, genres, version 
-						FROM movies
-						WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
-						AND (genres @> $2 OR $2 = '{}')
-						ORDER BY id`
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, Metadata, error) {
+	query := fmt.Sprintf(`
+			SELECT COUNT(*) OVER(), id, created_at, title, year, runtime, genres, version
+			FROM movies 
+			WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+			AND (genres @> $2 or $2 = '{}')
+			ORDER BY %s %s, id ASC
+			LIMIT $3 OFFSET $4
+		`, filters.SortColumn(), filters.SortDirection())
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := m.DB.QueryContext(ctx, query, title, genres)
+	args := []any{title, pq.Array(genres), filters.limit(), filters.offset()}
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
 	defer rows.Close()
 
+	totalMovies := 0
 	movies := []*Movie{}
+
 	for rows.Next() {
 		var movie Movie
 
 		err := rows.Scan(
+			&totalMovies,
 			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
@@ -160,17 +168,19 @@ func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*M
 		)
 
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		if err = rows.Err(); err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		movies = append(movies, &movie)
 	}
 
-	return movies, nil
+	metadata := calculateMetadata(totalMovies, filters.Page, filters.PageSize)
+
+	return movies, metadata, nil
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {
