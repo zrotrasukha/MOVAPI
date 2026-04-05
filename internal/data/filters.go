@@ -1,6 +1,11 @@
 package data
 
-import "github.com/zrotrasukha/MOVAPI/internal/validator"
+import (
+	"slices"
+	"strings"
+
+	"github.com/zrotrasukha/MOVAPI/internal/validator"
+)
 
 type Filters struct {
 	Page         int
@@ -16,4 +21,24 @@ func ValidFilters(v *validator.Validator, f Filters) {
 	v.Check(f.PageSize < 100, "page_size", "must be maximum of 100")
 
 	v.Check(validator.PermittedValues(f.Sort, f.SortSafelist...), "sort", "invalid sort value")
+}
+
+func (f Filters) SortColumn() string {
+	// for _, safeValue := range f.SortSafelist {
+	// 	if f.Sort == safeValue {
+	// 		return strings.TrimPrefix(f.Sort, "-")
+	// 	}
+	// }
+	if slices.Contains(f.SortSafelist, f.Sort) {
+		return strings.TrimPrefix(f.Sort, "-")
+	}
+
+	panic("unsafe sort parameter: " + f.Sort)
+}
+
+func (f Filters) SortDirection() string {
+	if strings.HasPrefix(f.Sort, "-") {
+		return "DESC"
+	}
+	return "ASC"
 }
