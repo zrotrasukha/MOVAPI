@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -84,17 +83,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/healthcheck", app.healthCheckHandler)
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	err = app.serve()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(0)
 	}
-
-	logger.Info("starting server", "addr", srv.Addr, "env", cfg.env)
-	err = srv.ListenAndServe()
-	logger.Error(err.Error())
 }
 
 func openDB(cfg config) (*sql.DB, error) {
