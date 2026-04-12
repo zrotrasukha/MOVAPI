@@ -58,6 +58,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 			app.logger.Error(err.Error())
 		}
 	})
+	app.wg.Wait()
 
 	err = app.writeJSON(w, http.StatusAccepted, envelop{"user": user}, nil)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -46,6 +47,7 @@ type application struct {
 	logger *slog.Logger
 	models data.Models
 	mailer mailer.Mailer
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -95,6 +97,7 @@ func main() {
 		logger: logger,
 		models: data.NewModels(db),
 		mailer: *mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		wg:     sync.WaitGroup{},
 	}
 
 	mux := http.NewServeMux()

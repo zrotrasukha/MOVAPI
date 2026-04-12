@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"html/template"
+	"time"
 
 	"gopkg.in/gomail.v2"
 )
@@ -61,6 +62,9 @@ func (m *Mailer) Send(recipient, templateFile string, data any) error {
 		if nil == err { // ain't no confusion widit
 			return nil
 		}
+
+		// wait for a bit before trying again
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	return err
