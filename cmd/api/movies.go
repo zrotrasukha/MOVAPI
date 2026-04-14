@@ -32,7 +32,7 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	v := validator.New()
 	if data.ValidateMovie(v, movie); !v.Valid() {
-		app.faildValidationResponse(w, r, v.Errors)
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	v := validator.New()
 	if data.ValidateMovie(v, movie); !v.Valid() {
-		app.faildValidationResponse(w, r, v.Errors)
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
@@ -188,7 +188,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 	input.Filters.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
 
 	if data.ValidFilters(v, input.Filters); !v.Valid() {
-		app.faildValidationResponse(w, r, v.Errors)
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
