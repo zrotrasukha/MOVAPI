@@ -16,6 +16,8 @@ var (
 	ErrDuplicateEmail = errors.New("duplicate email")
 )
 
+var AnonymousUser = &User{}
+
 type User struct {
 	ID        int64     `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
@@ -24,6 +26,10 @@ type User struct {
 	Password  password  `json:"-"`
 	Activated bool      `json:"activated"`
 	Version   int       `json:"-"`
+}
+
+func (u *User) IsAnonymous() bool {
+	return u == AnonymousUser
 }
 
 type password struct {
@@ -84,7 +90,7 @@ func (m UserModel) Insert(user *User) error {
 }
 
 func (m *UserModel) GetByEmail(email string) (*User, error) {
-	query := `SELECT id, created_at, name, email, password_hash, activated version
+	query := `SELECT id, created_at, name, email, password_hash, activated, version
 						FROM users
 						WHERE email = $1`
 
@@ -97,6 +103,7 @@ func (m *UserModel) GetByEmail(email string) (*User, error) {
 		&user.ID,
 		&user.CreatedAt,
 		&user.Name,
+		&user.Email,
 		&user.Password.hash,
 		&user.Activated,
 		&user.Version,
@@ -148,12 +155,12 @@ func (m UserModel) Update(user *User) error {
 
 }
 
-func validateEmail(v *validator.Validator, email string) {
+func ValidateEmail(v *validator.Validator, email string) {
 	v.Check(email != "", "email", "must be provided")
 	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
 }
 
-func validatePassword(v *validator.Validator, password string) {
+func ValidatePassword(v *validator.Validator, password string) {
 	v.Check(password != "", "email", "must be provided")
 	v.Check(len(password) >= 8, "password", "must be at least 8 bytes long")
 	v.Check(len(password) <= 72, "password", "must not be more than 72 bytes long")
@@ -163,9 +170,9 @@ func ValidateUser(v *validator.Validator, user *User) {
 	v.Check(user.Name != "", "name", "must be provided")
 	v.Check(len(user.Name) <= 500, "name", "must not be longer than 500 bytes long")
 
-	validateEmail(v, user.Email)
+	ValidateEmail(v, user.Email)
 	if user.Password.plaintext != nil {
-		validatePassword(v, *user.Password.plaintext)
+		ValidatePassword(v, *user.Password.plaintext)
 	}
 
 	if user.Password.hash == nil {
