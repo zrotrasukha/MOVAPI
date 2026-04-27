@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
-	"log"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,13 +14,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/zrotrasukha/MOVAPI/internal/data"
 	"github.com/zrotrasukha/MOVAPI/internal/mailer"
+	"github.com/zrotrasukha/MOVAPI/internal/vcs"
 )
 
-const version = "1.0.0"
+var (
+	version = vcs.Version()
+)
 
 type config struct {
 	port int
@@ -59,19 +61,10 @@ type application struct {
 func main() {
 	var cfg config
 
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
-	dsn := os.Getenv("DSN")
-	if dsn == "" {
-		log.Fatal(err)
-	}
-
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
-	flag.StringVar(&cfg.db.dsn, "db-dsn", dsn, "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", "", "PostgreSQL DSN")
 
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
@@ -91,7 +84,15 @@ func main() {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
 	})
+
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version: %s\n", version)
+		os.Exit(0)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	db, err := openDB(cfg)
